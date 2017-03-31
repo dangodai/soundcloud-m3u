@@ -14,6 +14,14 @@ import (
 	"github.com/yanatan16/golang-soundcloud/soundcloud"
 )
 
+type Track struct {
+	//The http stream URL
+	Stream   string
+	Duration int
+	Title    string
+	Artist   string
+}
+
 var (
 	ClientID                          string //Client ID from soundcloud api
 	PlaylistDir                       string //Directory to save m3u playlists to
@@ -39,8 +47,18 @@ func init() {
 }
 
 func main() {
+	if URL == "" {
+		handleError(errors.New("no url"))
+	} else if strings.Contains(URL, "soundcloud.com") {
+		handleSoundcloudUrl(URL)
+	} else if strings.Contains(URL, "bandcamp.com") {
+		handleBandcampUrl(URL)
+	}
+}
+
+func handleSoundcloudUrl(url string) {
 	//Resolve the given URL to find resource and ID
-	resource, id, err := Resolve(URL)
+	resource, id, err := Resolve(url)
 	if err != nil {
 		handleError(err)
 		return
@@ -74,7 +92,7 @@ func fromTrack(id uint64) {
 	tracks[0] = track
 
 	filename := fmt.Sprintf("(Track) %v - %v", track.Title, track.SubUser.User.Username)
-	writeTracksToFile(filename, tracks)
+	writeTracksToFile(filename, soundcloudTracksToGenericTracks(tracks))
 }
 
 // fromUser saves an m3u file containing the given user's uploads.
@@ -106,7 +124,7 @@ func fromUser(id uint64) {
 		}
 
 		filename = fmt.Sprintf("(Favourites) %v.m3u", user.Username)
-		writeTracksToFile(filename, favs)
+		writeTracksToFile(filename, soundcloudTracksToGenericTracks(favs))
 	}
 
 	//If the -s flag is set, also save the users sets to m3u playlists
@@ -121,8 +139,8 @@ func fromUser(id uint64) {
 		}
 	}
 
-	filename = fmt.Sprintf("(Uploads) %v.m3u", user.Username)
-	writeTracksToFile(filename, tracks)
+	filename = fmt.Sprintf("(Uploads) %v", user.Username)
+	writeTracksToFile(filename, soundcloudTracksToGenericTracks(tracks))
 }
 
 // Save m3u from a playlist url
@@ -133,12 +151,12 @@ func fromPlaylist(id uint64) {
 		return
 	}
 
-	filename := fmt.Sprintf("(Playlist) %v by %v.m3u", pl.Title, pl.SubUser.User.Username)
-	writeTracksToFile(filename, pl.Tracks)
+	filename := fmt.Sprintf("(Playlist) %v by %v", pl.Title, pl.SubUser.User.Username)
+	writeTracksToFile(filename, soundcloudTracksToGenericTracks(pl.Tracks))
 }
 
 // Create file with filename, and write provided tracks to m3u playlist
-func writeTracksToFile(filename string, tracks []*soundcloud.Track) {
+func writeTracksToFile(filename string, tracks []Track) {
 	//Make sure the tracks aren't empty before writing (maybe move
 	//this somewhere else?)
 	if len(tracks) == 0 {
@@ -147,7 +165,7 @@ func writeTracksToFile(filename string, tracks []*soundcloud.Track) {
 	}
 
 	//Open a file
-	fp := filepath.Join(PlaylistDir, sanitize.Name(filename))
+	fp := filepath.Join(PlaylistDir, sanitize.Name(filename)+".m3u")
 	f, err := os.Create(fp)
 	if err != nil {
 		handleError(err)
@@ -165,12 +183,28 @@ func writeTracksToFile(filename string, tracks []*soundcloud.Track) {
 	//Stream URL must be appended with a ClientID or else it will be
 	//rejected
 	for _, track := range tracks {
-		fmt.Fprintf(w, "#EXTINF:%v,%v - %v\n", track.Duration/1000, track.Title, track.SubUser.User.Username)
-		fmt.Fprintf(w, "%v?client_id=%v\n", track.StreamUrl, ClientID)
+		fmt.Fprintf(w, "#EXTINF:%v,%v - %v\n", track.Duration, track.Title, track.Artist)
+		fmt.Fprintf(w, "%v\n", track.Stream)
 	}
 	w.Flush()
 
 	verboseMessage("Playlist saved: " + fp)
+}
+
+//soundcloudTracksToGenericTracks converts []soundcloud.Track to []Track.
+//This is to have a common interface for any sort of streaming site we might
+//pull from
+func soundcloudTracksToGenericTracks(sctracks []*soundcloud.Track) []Track {
+	var tracks []Track
+
+	for _, sctrack := range sctracks {
+		stream := sctrack.StreamUrl + "?client_id=" + ClientID
+		artist := sctrack.SubUser.User.Username
+		track := Track{Stream: stream, Artist: artist, Duration: int(sctrack.Duration / 1000), Title: sctrack.Title}
+		tracks = append(tracks, track)
+	}
+
+	return tracks
 }
 
 // handleError to print meaningful error messages to the users
@@ -178,10 +212,11 @@ func handleError(err error) {
 	switch err.Error() {
 	case "empty location":
 		fmt.Println("Error: Invalid URL provided (no resource found).")
-		fmt.Println("Make sure you have used the -u or -url option.")
 	case "unknown resource":
 		fmt.Println("Error: Unknown soundcloud resource received.")
 		fmt.Println("Try using a track, profile, or playlist URL.")
+	case "no url":
+		fmt.Println("No URL provided. Use -u or -url option.")
 	default:
 		fmt.Println("Error: ", err)
 	}
