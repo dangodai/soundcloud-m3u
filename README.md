@@ -41,7 +41,26 @@ Any user can apply for their own key, however the process is slow. Additionally,
 
 # Install
 
-Arch Linux (AUR): [soundcloud-m3u](https://aur.archlinux.org/packages/soundcloud-m3u) 
+Arch Linux (AUR): [soundcloud-m3u](https://aur.archlinux.org/packages/soundcloud-m3u)
+```sh
+yaourt -S soundcloud-m3u
+```
+
+Ubuntu
+```sh
+sudo add-apt-repository ppa:twodopeshaggy/ppapackages
+sudo apt-get update
+sudo apt-get install soundcloud-m3u
+```
+
+Debian
+```sh
+sudo apt-add-repository 'deb http://shaggytwodope.github.io/repo ./'
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 7086E9CC7EC3233B
+sudo apt-key update
+sudo apt-get update
+sudo apt-get install soundcloud-m3u
+```
 
 # Building
 
@@ -57,4 +76,4 @@ The _go install_ command installs the binary to $GOPATH/bin.
 
 ### Todo
  - Improve the scraping of data from Bandcamp (currently ugly regex)
- - Provide binaries/apt packages
+ - Provide binaries
