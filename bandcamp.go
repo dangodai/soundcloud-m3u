@@ -61,6 +61,11 @@ func handleBandcampAlbum(url string) {
 	//Index 0 of the returned slice is the entire match, we just want
 	//the first group, which excludes the var name and trailing semicolon
 	//TODO: Error check (returns nil if there was no match)
+	match := pattern.FindStringSubmatch(body)
+	if len(match) < 1 {
+		handleError(errors.New("no album found"))
+		return
+	}
 	TralbumData := pattern.FindStringSubmatch(body)[1]
 
 	//This regex should grab the Artist, Trackinfo, and "current" fields from the json
