@@ -17,7 +17,8 @@ type BandcampAlbum struct {
 // Determine whether URL is an album or an artist/label and
 // call the appropriate function
 func handleBandcampUrl(url string) {
-	if strings.Contains(url, "/album/") {
+	//albums and tracks seem to be handled the same
+	if strings.Contains(url, "/album/") || strings.Contains(url, "/track/") {
 		handleBandcampAlbum(url)
 	} else if strings.Contains(url, ".bandcamp") {
 		handleBandcampProfile(url)
